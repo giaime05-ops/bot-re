@@ -1,63 +1,52 @@
 import os
-from datetime import date
-from threading import Thread
+import threading
 from flask import Flask
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-# === MINI WEB SERVER (Per bypassare il limite Free di Render) ===
-app_web = Flask('')
+# --- SERVER FLASK (Keep-Alive per UptimeRobot) ---
+app = Flask(__name__)
 
-@app_web.route('/')
+@app.route('/')
 def home():
-    return "Bot Re del giorno attivo!"
+    return "GOAT Bot is running!", 200
 
-def run_web():
-    app_web.run(host='0.0.0.0', port=8080)
+def run_flask():
+    # Render imposta automaticamente la variabile PORT
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
 
-def keep_alive():
-    t = Thread(target=run_web)
-    t.daemon = True
-    t.start()
+# --- TELEGRAM BOT LOGIC ---
+TOKEN = "8825337862:AAGUvDtWOQ3MewoB1r9scg3rRAy8uMZpd6s"
 
-# === CONFIGURAZIONE BOT ===
-TOKEN = "8891286805:AAErmj2c6zs7YT1slmpj t6C2HNRfRopsiwU"
-PAROLA_SEGRETA = "negrone"
-
-re_di_oggi = None
-data_ultimo_re = None
-
-async def controlla_messaggio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global re_di_oggi, data_ultimo_re
-    
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
-        
-    testo = update.message.text.lower().strip()
-    oggi = date.today()
     
-    if data_ultimo_re != oggi:
-        re_di_oggi = None
-        
-    if PAROLA_SEGRETA in testo:
-        utente = update.message.from_user
-        nome_utente = f"@{utente.username}" if utente.username else utente.first_name
-        
-        if re_di_oggi is None:
-            re_di_oggi = nome_utente
-            data_ultimo_re = oggi
-            await update.message.reply_text(
-                f"👑 **ATTENZIONE TUTTI!** 👑\n\n"
-                f"{nome_utente} ha scritto la parola magica ed è ufficialmente il **RE DEL GIORNO**! 👑✨"
-            )
-        elif re_di_oggi == nome_utente:
-            await update.message.reply_text("👑 Sei già il Re di oggi, non ti allargare!")
-        else:
-            await update.message.reply_text(f"❌ Troppo tardi! Il Re di oggi è già {re_di_oggi}.")
+    text = update.message.text.lower()
+    
+    # Risponde quando qualcuno scrive "goat"
+    if "goat" in text:
+        user_name = update.message.from_user.first_name
+        await update.message.reply_text(f"Sei il GOAT del giorno 🐐, {user_name}!")
 
-if __name__ == '__main__':
-    keep_alive()  # Avvia il serverino web
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), controlla_messaggio))
-    print("Bot avviato e in ascolto...")
-    app.run_polling()
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("GOAT-Bot attivo e operativo 🐐!")
+
+def main():
+    # Avvia il server Flask in un thread separato
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # Avvia il Bot Telegram
+    application = ApplicationBuilder().token(TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    
+    print("Bot in ascolto...")
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
