@@ -17,7 +17,7 @@ def run_flask():
     app.run(host="0.0.0.0", port=port)
 
 # --- TELEGRAM BOT LOGIC ---
-TOKEN = "8825337862:AAGUvDtWOQ3MewoB1r9scg3rRAy8uMZpd6s"
+TOKEN = "8825337862:AAEcKHd7oP73eaRmtsegqeRIIZKVSxnnF-U"
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
